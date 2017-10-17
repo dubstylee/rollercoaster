@@ -11,15 +11,28 @@ class State(Enum):
   FORM_SOCIAL_GROUP = 3
 
 class Car:
+  identifier = 0;
   state = State.READY
 
   def advanceState(self):
     self.state = State((self.state.value + 1) % 4)
     print self.state.name
 
+  def dispatch(self):
+    while(True):
+      self.advanceState()
+      if(self.state == READY):
+        break
+      else:
+        time.sleep(1)
+    print "Car %d " + self.identifier + " is now vacant"
+      
+
 cars = []
 for i in range(NUM_CARS):
-  cars.append(Car())
+  car = Car()
+  car.identifier = i+1
+  cars.append(car)
 
 def on_connect(client, userdata, flags, rc):
   print "Connected"
@@ -28,7 +41,11 @@ def on_message(client, userdata, msg):
   message = msg.payload
   print message
   if "PICKUP" in message :
-    car.advanceState()
+    car = getVacantCar()
+    if(car != None):
+      car.dispatch()
+    else:
+      wait(4)
         
 def on_disconnect(client, userdata, rc):
   print "Disconnected"
@@ -52,14 +69,12 @@ mqtt_client.loop_start()
 
 
 def getVacantCar() :
-  print "Searching a free car"
-  for i in range(NUM_CARS):
-    if(cars[i].status == READY):
-      return i
-  return (-1)
-
+  for car in cars:
+    if(car.status == READY):
+      return car
+  return None
+ 
 def main():
-  print "I am here"
   while True:
     time.sleep(1)
 
