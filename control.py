@@ -13,6 +13,7 @@ class State(Enum):
 
 class Control():
 	state = State.WAITING_FOR_PASSENGERS
+	passengers = 0
 
 # Deal with control-c
 def control_c_handler(signum, frame):
@@ -31,6 +32,8 @@ ip_addr = str(s.getsockname()[0])
 print('IP address: {}'.format(ip_addr))
 s.close()
 
+control = Control()
+
 def on_connect(client, userdata, flags, rc):
 	print('connected')
 
@@ -41,13 +44,19 @@ def on_message(client, userdata, msg):
 	#print(userdata)
 	print(msg.topic)
 	print(msg.payload)
-	i = msg.payload.find("====")
-	name = msg.payload[i+5:]
+	i = msg.payload.find("requests passenger entry")
+	if i > 0:
+		if control.passengers < NUM_PASSENGERS:
+			control.passengers = control.passengers + 1
+			print("allow passenger, send ack")
+		else:
+			print("platform is full, reject")
+
 	# Here is where you write to file and unsubscribe
-	with open("test.txt", "a+") as myfile:
-		if name not in myfile.read():
-			myfile.write(name+"\n")
-		myfile.close()
+	#with open("test.txt", "a+") as myfile:
+		#if name not in myfile.read():
+			#myfile.write(name+"\n")
+		#myfile.close()
 
 def on_disconnect(client, userdata, rc):
 	print("Disconnected in a normal way")
@@ -56,23 +65,20 @@ def on_disconnect(client, userdata, rc):
 def on_log(client, userdata, level, buf):
 	print("log: {}".format(buf)) # only semi-useful IMHO
 
+def setup_client(client):
+	client.on_connect = on_connect
+	client.on_message = on_message
+	client.on_disconnect = on_disconnect
+	client.on_log = on_log
+
 def main():
-
-	control = Control()
-	passengers = 0
-
 	# Instantiate the MQTT client
 	mqtt_client = paho.Client()
 
-	# set up handlers
-	mqtt_client.on_connect = on_connect
-	mqtt_client.on_message = on_message
-	mqtt_client.on_disconnect = on_disconnect
-	mqtt_client.on_log = on_log
-
+	setup_client(mqtt_client)
 	mqtt_topic = 'cis650/somethingcool'
 
-	mqtt_client.will_set(mqtt_topic, '______________Will of '+MY_NAME+' _________________\n\n', 0, False)
+	mqtt_client.will_set(mqtt_topic, '______________Will of CONTROL_________________\n\n', 0, False)
 	broker = 'sansa.cs.uoregon.edu'
 	mqtt_client.connect(broker, '1883')
 
@@ -84,29 +90,32 @@ def main():
 	mqtt_client.loop_start()  # just in case - starts a loop that listens for incoming data and keeps client alive
 
 	while True:
-		choice = input("Enter a command: 1) passenger, 2) pickup: ")
+		choice = raw_input("[CONTROL]: (r) request pickup (q) quit: ")
 
 		# passenger arrive
-		if int(choice) == 1:
-			if passengers == NUM_PASSENGERS:
-				print("platform is full")
-			else:
-				passengers = passengers + 1
-				timestamp = dt.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S.%f')
-				mqtt_message = "[%s] %s passenger arrived on platform (%d passengers waiting)" % (timestamp,ip_addr,passengers)
-				mqtt_client.publish(mqtt_topic, mqtt_message)  # by doing this publish, we should keep client alive
-				print("add passenger")
-		elif int(choice) == 2:
+		#if int(choice) == 1:
+		#	if control.passengers == NUM_PASSENGERS:
+		#		print("platform is full")
+		#	else:
+		#		control.passengers = controlpassengers + 1
+		#		timestamp = dt.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S.%f')
+		#		mqtt_message = "[%s] %s passenger arrived on platform (%d passengers waiting)" % (timestamp,ip_addr,control.passengers)
+		#		mqtt_client.publish(mqtt_topic, mqtt_message)  # by doing this publish, we should keep client alive
+		#		print("add passenger")
+		#elif int(choice) == 2:
+		if choice == "r":
 			if control.state == State.WAITING_FOR_CAR:
 				print("already waiting for a car")
-			elif passengers < NUM_PASSENGERS:
+			elif control.passengers < NUM_PASSENGERS:
 				print("not ready for pickup yet")
 			else:
 				control.state = State.WAITING_FOR_CAR
 				timestamp = dt.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S.%f')
-				mqtt_message = "[%s] %s PICKUP %d passengers" % (timestamp,ip_addr,passengers)
+				mqtt_message = "[%s] %s PICKUP %d passengers" % (timestamp,ip_addr,control.passengers)
 				mqtt_client.publish(mqtt_topic, mqtt_message)  # by doing this publish, we should keep client alive
 				print("request pickup")
+		elif choice == "q":
+			exit()
 
 # I have the loop_stop() in the control_c_handler above. A bit kludgey.
 

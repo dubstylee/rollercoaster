@@ -2,15 +2,24 @@ import time, socket, sys
 from datetime import datetime as dt
 import paho.mqtt.client as paho
 import signal
+from enum import Enum
 
 MY_NAME = 'Brian W' # change to your name
 
+class State(Enum):
+	CAN_SEND = 0
+	WAITING_FOR_ACK = 1
+	PLATFORM_FULL = 2
+
+class Turnstile():
+	state = State.CAN_SEND
+
 # Deal with control-c
 def control_c_handler(signum, frame):
-	print('saw control-c')
+	#print('saw control-c')
 	mqtt_client.disconnect()
 	mqtt_client.loop_stop()  # waits until DISCONNECT message is sent out
-	print ("Now I am done.")
+	#print ("Now I am done.")
 	sys.exit(0)
 
 signal.signal(signal.SIGINT, control_c_handler)
@@ -33,57 +42,51 @@ def on_message(client, userdata, msg):
 	#print(userdata)
 	print(msg.topic)
 	print(msg.payload)
-	i = msg.payload.find("====")
-	name = msg.payload[i+5:]
+	#i = msg.payload.find("====")
+	#name = msg.payload[i+5:]
 	# Here is where you write to file and unsubscribe
-	with open("test.txt", "a+") as myfile:
-		if name not in myfile.read():
-			myfile.write(name+"\n")
-		myfile.close()
-
-# You can also add specific callbacks that match specific topics.
-# See message_callback_add at https://pypi.python.org/pypi/paho-mqtt#callbacks.
-# When you have add ins, then the on_message handler just deals with topics
-# you have *not* written an add in for. You can just use the single on_message
-# handler for this problem.
+	#with open("test.txt", "a+") as myfile:
+		#if name not in myfile.read():
+			#myfile.write(name+"\n")
+		#myfile.close()
 
 def on_disconnect(client, userdata, rc):
 	print("Disconnected in a normal way")
-	#graceful so won't send will
 
 def on_log(client, userdata, level, buf):
 	print("log: {}".format(buf)) # only semi-useful IMHO
 
-# Instantiate the MQTT client
-mqtt_client = paho.Client()
+def main():
+	# Instantiate the MQTT client
+	mqtt_client = paho.Client()
+	turnstile = Turnstile()
 
-# set up handlers
-mqtt_client.on_connect = on_connect
-mqtt_client.on_message = on_message
-mqtt_client.on_disconnect = on_disconnect
-mqtt_client.on_log = on_log
+	# set up handlers
+	mqtt_client.on_connect = on_connect
+	mqtt_client.on_message = on_message
+	mqtt_client.on_disconnect = on_disconnect
+	mqtt_client.on_log = on_log
 
-mqtt_topic = 'cis650/' + socket.gethostname()  # don't change this or you will screw it up for others
+	mqtt_topic = 'cis650/somethingcool'
 
-# See https://pypi.python.org/pypi/paho-mqtt#option-functions.
-mqtt_client.will_set(mqtt_topic, '______________Will of '+MY_NAME+' _________________\n\n', 0, False)
+	# See https://pypi.python.org/pypi/paho-mqtt#option-functions.
+	mqtt_client.will_set(mqtt_topic, '______________Will of TURNSTILE _________________\n\n', 0, False)
 
-broker = 'sansa.cs.uoregon.edu'  # Boyana's server
-# Public brokers: https://github.com/mqtt/mqtt.github.io/wiki/public_brokers, e.g., 'test.mosquitto.org'
+	broker = 'sansa.cs.uoregon.edu'
+	mqtt_client.connect(broker, '1883')
 
-mqtt_client.connect(broker, '1883')
+	mqtt_client.subscribe('cis650/somethingcool')
+	mqtt_client.loop_start()  # just in case - starts a loop that listens for incoming data and keeps client alive
 
-# You can subscribe to more than one topic: https://pypi.python.org/pypi/paho-mqtt#subscribe-unsubscribe.
-# If you do list more than one topic, consdier using message_callback_add for each topic as described above.
-# For below, wild-card should do it.
-mqtt_client.subscribe('cis650/#') #subscribe to all students in class
-
-mqtt_client.loop_start()  # just in case - starts a loop that listens for incoming data and keeps client alive
-
-while True:
-	timestamp = dt.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S.%f')
-	mqtt_message = "[%s] %s " % (timestamp,ip_addr) + '==== '+MY_NAME  # don't change this or you will screw it up for others
-	mqtt_client.publish(mqtt_topic, mqtt_message)  # by doing this publish, we should keep client alive
-	time.sleep(3)
+	while True:
+		choice = raw_input("[TURNSTILE]: (p) for passenger, (q) to quit: ")
+		if choice == 'p':
+			timestamp = dt.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S.%f')
+			mqtt_message = "[%s] %s TURNSTILE requests passenger entry" % (timestamp,ip_addr)
+			mqtt_client.publish(mqtt_topic, mqtt_message)  # by doing this publish, we should keep client alive
+			turnstile.state = State.WAITING_FOR_ACK	
+		elif choice == 'q':
+			print("close down the shop")
 
 # I have the loop_stop() in the control_c_handler above. A bit kludgey.
+main()
