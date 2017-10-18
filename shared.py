@@ -4,6 +4,17 @@ import signal
 
 mqtt_client = paho.Client()
 
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.connect(("8.8.8.8", 80))
+#Extract your ip address
+ip_addr = str(s.getsockname()[0])
+print('IP address: {}'.format(ip_addr))
+s.close()
+
+broker = 'sansa.cs.uoregon.edu'  # Boyana's server 
+mqtt_client.connect(broker, '1883') 
+mqtt_client.subscribe('cis650/somethingcool') 
+
 def exit_program():
 	mqtt_client.disconnect()
 	mqtt_client.loop_stop()
@@ -23,7 +34,11 @@ def on_disconnect(client, userdata, rc):
 	print "disconnected in a normal way"
 
 def on_log(client, userdata, level, buf):
-	print "log: {}".format(buif)
+	print "log: {}".format(buf)
+
+def send_message(message)
+	timestamp = dt.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S.%f')
+	mqtt_client.publish(mqtt_topic, "[%s] %s %s" % (timestamp, ip_addr, message))
 
 mqtt_client.on_connect = on_connect
 mqtt_client.on_disconnect = on_disconnect

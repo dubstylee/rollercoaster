@@ -1,7 +1,7 @@
 from enum import Enum
 import paho.mqtt.client as paho
-import time
-import threading
+import time,threading
+from shared import *
 
 NUM_CARS = 1
 
@@ -14,6 +14,7 @@ class State(Enum):
 class Car:
   identifier = 0;
   state = State.READY
+  passangers = []
 
   def advanceState(self):
     self.state = State((self.state.value + 1) % 4)
@@ -34,40 +35,28 @@ for i in range(NUM_CARS):
   car.identifier = i+1
   cars.append(car)
 
-def on_connect(client, userdata, flags, rc):
-  print "Connected"
-
 def on_message(client, userdata, msg):
   message = msg.payload
   print message
   if "PICKUP" in message :
-    car = getVacantCar()
+    #pessangers = getPessangers();
+    car = getVacantCar();
     if(car != None):
+      car.pessangers = pessangers
+      mqtt_client.publish(mqtt_topic, "ACCEPT %s" % car.pessangers)
       #perform the dispatch on another thread
       thread = threading.Thread(target=car.dispatch())
       thread.start()
     else:
-      wait(2)
-
-def on_disconnect(client, userdata, rc):
-  print "Disconnected"
+      mqtt_client.publish(mqtt_topic, "REJECT %s" % car.pessangers)
 
 def on_log(client, userdata, level, buf):
         receivedLog = "log: {}".format(buf)
         print(receivedLog)
 
-mqtt_client = paho.Client()
-mqtt_client.on_connect = on_connect
-mqtt_client.on_message = on_message
-mqtt_client.on_disconnect = on_disconnect
-mqtt_client.on_log = on_log
-mqtt_topic = 'cis650/somethingcool'
- 
+mqtt_client.on_message = on_message 
 mqtt_client.will_set(mqtt_topic, 'These cars be messed up dawg!!!!\n\n', 0, False) 
-broker = 'sansa.cs.uoregon.edu'  # Boyana's server 
-mqtt_client.connect(broker, '1883') 
-mqtt_client.subscribe('cis650/somethingcool') 
-mqtt_client.loop_start()
+qtt_client.loop_start()
 
 def getVacantCar() :
   for car in cars:
