@@ -1,6 +1,7 @@
 from enum import Enum
 import paho.mqtt.client as paho
 import time
+import threading
 
 NUM_CARS = 1
 
@@ -16,7 +17,7 @@ class Car:
 
   def advanceState(self):
     self.state = State((self.state.value + 1) % 4)
-    print self.state.name
+    print seld.identifier + " " + self.state.name
 
   def dispatch(self):
     while(True):
@@ -27,7 +28,6 @@ class Car:
         time.sleep(1)
     print "Car %d " + self.identifier + " is now vacant"
       
-
 cars = []
 for i in range(NUM_CARS):
   car = Car()
@@ -43,10 +43,12 @@ def on_message(client, userdata, msg):
   if "PICKUP" in message :
     car = getVacantCar()
     if(car != None):
-      car.dispatch()
+      #perform the dispatch on another thread
+      thread = threading.Thread(target=car.dispatch())
+      thread.start()
     else:
-      wait(4)
-        
+      wait(2)
+
 def on_disconnect(client, userdata, rc):
   print "Disconnected"
 
@@ -66,7 +68,6 @@ broker = 'sansa.cs.uoregon.edu'  # Boyana's server
 mqtt_client.connect(broker, '1883') 
 mqtt_client.subscribe('cis650/somethingcool') 
 mqtt_client.loop_start()
-
 
 def getVacantCar() :
   for car in cars:
