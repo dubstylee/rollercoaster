@@ -13,9 +13,11 @@ class State(Enum):
 	WAITING_FOR_PASSENGERS = 0
 	WAITING_FOR_CAR = 1
 
+
 class Control():
 	state = State.WAITING_FOR_PASSENGERS
-	passengers = 0
+	passengers = []
+
 
 # Get your IP address
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -38,14 +40,19 @@ def on_message(client, userdata, msg):
 	#print(userdata)
 	print(msg.topic)
 	print(msg.payload)
-	i = msg.payload.find("requests passenger entry")
+	i = msg.payload.find("requests entry for passenger")
 	if i > 0:
+		pid = msg.payload[i+30:]
+		#print pid
+		p = Passenger(int(pid))
 		timestamp = dt.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S.%f')
-		if control.passengers < NUM_PASSENGERS:
-			control.passengers = control.passengers + 1
-			mqtt_message = "[%s] %s CONTROL allow passenger" % (timestamp,ip_addr)
+
+		print "count == %d" % len(control.passengers)
+		if len(control.passengers) < NUM_PASSENGERS:
+			control.passengers.append(p)
+			mqtt_message = "[%s] %s CONTROL allow passenger #%d" % (timestamp, ip_addr, p.id)
 		else:
-			mqtt_message = "[%s] %s CONTROL platform is full" % (timestamp,ip_addr)
+			mqtt_message = "[%s] %s CONTROL platform is full" % (timestamp, ip_addr)
 		mqtt_client.publish(mqtt_topic, mqtt_message)
 
 	# Here is where you write to file and unsubscribe
@@ -80,11 +87,10 @@ def main():
 			else:
 				control.state = State.WAITING_FOR_CAR
 				timestamp = dt.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S.%f')
-				mqtt_message = "[%s] %s PICKUP %d passengers" % (timestamp,ip_addr,control.passengers)
-				mqtt_client.publish(mqtt_topic, mqtt_message)  # by doing this publish, we should keep client alive
-				print("request pickup")
+				mqtt_message = "[%s] %s PICKUP %s" % (timestamp,ip_addr,control.passengers)
+				mqtt_client.publish(mqtt_topic, mqtt_message)
 		elif choice == "q":
-			exit()
+			exit_program()
 
 # I have the loop_stop() in the control_c_handler above. A bit kludgey.
 

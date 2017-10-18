@@ -1,6 +1,5 @@
 import time, socket, sys
 from datetime import datetime as dt
-#import paho.mqtt.client as paho
 import signal
 from enum import Enum
 
@@ -15,7 +14,7 @@ class State(Enum):
 
 class Turnstile():
 	state = State.CAN_SEND
-	passengers = 0
+	cur_passenger = 0
 
 # Instantiate the MQTT client
 #mqtt_client = paho.Client()
@@ -34,22 +33,24 @@ def on_message(client, userdata, msg):
 
 	#print(client)
 	#print(userdata)
-	print(msg.topic)
-	print(msg.payload)
-	i = msg.payload.find("CONTROL")
-	if i > 0:
-		if "allow passenger" in msg.payload:
-			turnstile.passengers = turnstile.passengers + 1
-		elif "platform is full" in msg.payload:
-			print("platform is full, try again later")
+	#print(msg.topic)
+	if "CONTROL" in msg.payload:
+		# we only listen for messages from CONTROL
+		if turnstile.state == State.CAN_SEND:
+			# we don't care about incoming messages in this state
+			print msg.payload
+		elif turnstile.state == State.WAITING_FOR_ACK:
+			# we are looking for a response for passenger #(cur_passenger)
+			if "allow passenger" in msg.payload:
+				turnstile.state = State.CAN_SEND
+			elif "platform is full" in msg.payload:
+				turnstile.state = State.PLATFORM_FULL
+				print "platform is full, try again later"
+			print msg.payload
+		elif turnstile.state == State.PLATFORM_FULL:
+			# an "all clear" message will put us back to CAN_SEND
+			print msg.payload
 
-	#i = msg.payload.find("====")
-	#name = msg.payload[i+5:]
-	# Here is where you write to file and unsubscribe
-	#with open("test.txt", "a+") as myfile:
-		#if name not in myfile.read():
-			#myfile.write(name+"\n")
-		#myfile.close()
 
 def main():
 
@@ -66,12 +67,19 @@ def main():
 	mqtt_client.loop_start()
 
 	while True:
-		choice = raw_input("[TURNSTILE (%d sent)]: (p) for passenger, (q) to quit: " % turnstile.passengers)
+		choice = raw_input("[TURNSTILE (%d)]: (p) for passenger, (q) to quit: " % turnstile.cur_passenger)
 		if choice == 'p':
-			timestamp = dt.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S.%f')
-			mqtt_message = "[%s] %s TURNSTILE requests passenger entry" % (timestamp,ip_addr)
-			mqtt_client.publish(mqtt_topic, mqtt_message)
-			turnstile.state = State.WAITING_FOR_ACK	
+			if turnstile.state == State.WAITING_FOR_ACK:
+				print "Turnstile is still waiting for acknowledgement of passenger #%d" % turnstile.cur_passenger
+			elif turnstile.state == State.CAN_SEND:
+				turnstile.cur_passenger = turnstile.cur_passenger + 1
+				p = Passenger(turnstile.cur_passenger)
+				timestamp = dt.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S.%f')
+				mqtt_message = "[%s] %s TURNSTILE requests entry for passenger #%d" % (timestamp,ip_addr,p.id)
+				mqtt_client.publish(mqtt_topic, mqtt_message)
+				turnstile.state = State.WAITING_FOR_ACK	
+			elif turnstile.state == State.PLATFORM_FULL:
+				print "Platform is currently full, wait a while then try again"
 		elif choice == 'q':
 			exit_program()
 
