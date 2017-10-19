@@ -16,6 +16,7 @@ class State(Enum):
 class Control():
 	state = State.WAITING_FOR_PASSENGERS
 	passengers = []
+	timeout = 0
 
 
 control = Control()
@@ -26,25 +27,36 @@ control = Control()
 def on_message(client, userdata, msg):
 	#print(client)
 	#print(userdata)
-	print(msg.topic)
-	print(msg.payload)
-	i = msg.payload.find("requests entry for passenger")
-	if i > 0:
-		pid = msg.payload[i+30:]
-		p = Passenger(int(pid))
+	#print(msg.topic)
+	#print(msg.payload)
 
-		if len(control.passengers) < PLATFORM_CAPACITY:
-			control.passengers.append(p)
-			mqtt_message = "CONTROL allow passenger #%d" % p.id
-			send_message(mqtt_message)
+	if "TURNSTILE" in msg.payload:
+		#print "MESSAGE FROM TURNSTILE %s" % msg.payload
+		i = msg.payload.find("requests entry for passenger")
+		if i > 0:
+			pid = msg.payload[i+30:]
+			p = Passenger(int(pid))
 
-			if len(control.passengers) == CAR_CAPACITY:
-				mqtt_message = "PICKUP a %s" % control.passengers
+			if len(control.passengers) < PLATFORM_CAPACITY:
+				control.passengers.append(p)
+				mqtt_message = "CONTROL allow passenger #%d" % p.id
 				send_message(mqtt_message)
-		else:
-			mqtt_message = "CONTROL platform is full"
-			send_message(mqtt_message)
 
+				if len(control.passengers) == CAR_CAPACITY:
+					control.state = State.WAITING_FOR_CAR
+					mqtt_message = "PICKUP a %s" % control.passengers
+					send_message(mqtt_message)
+			else:
+				mqtt_message = "CONTROL platform is full"
+				send_message(mqtt_message)
+	elif "CAR" in msg.payload:
+		print "MESSAGE FROM CAR %s" % msg.payload
+		splits = str.split(msg.payload, " ")
+		if splits[4] == "a":
+			if splits[5] == "ACCEPT":
+				control.timeout = 0
+				control.state = State.WAITING_FOR_PASSENGERS
+				del control.passengers[:]
 
 def main():
 
@@ -57,19 +69,14 @@ def main():
 	mqtt_client.loop_start()  # just in case - starts a loop that listens for incoming data and keeps client alive
 
 	while True:
-		time.sleep(3)
-		#choice = raw_input("[CONTROL]: (r) request pickup (q) quit: ")
-
-		#if choice == "r":
-		#	if control.state == State.WAITING_FOR_CAR:
-		#		print("already waiting for a car")
-		#	elif control.passengers < NUM_PASSENGERS:
-		#		print("not ready for pickup yet")
-		#	else:
-		#		control.state = State.WAITING_FOR_CAR
-		#		mqtt_message = "PICKUP %s" % control.passengers
-		#		send_message(mqtt_message)
-		#elif choice == "q":
-		#	exit_program()
+		if control.state == State.WAITING_FOR_CAR:
+			time.sleep(0.5)
+			control.timeout = control.timeout + 1
+			if control.timeout > 15:
+				send_message("CONTROL timeout, re-sending")
+				send_message("PICKUP a %s" % control.passengers)
+				control.timeout = 0
+		else:
+			time.sleep(3)
 
 main()
