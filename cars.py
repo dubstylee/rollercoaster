@@ -2,6 +2,7 @@ from enum import Enum
 import paho.mqtt.client as paho
 import time,threading
 from shared import *
+from random import *
 
 class State(Enum):
   READY = 0
@@ -29,7 +30,7 @@ class Car:
       if(self.state == State.READY):
         break
       else:
-        time.sleep(2)
+        time.sleep(randint(1, 10))
     print "Car %s is now vacant" % self.identifier
 
 car = Car()
@@ -41,7 +42,7 @@ def on_message(client, userdata, msg):
     if(splits[4] == car.identifier): 
       send_message("CAR %s ACCEPT" % car.identifier)
       car.passengers = Passenger.list_from_string(splits[5])
-      car.dispatch()
+      target=car.dispatch()
 
 mqtt_client.on_message = on_message
 mqtt_client.will_set(mqtt_topic, 'These cars be messed up dawg!!!!\n\n', 0, False)
