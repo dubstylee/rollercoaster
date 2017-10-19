@@ -47,7 +47,7 @@ def send_message(message):
 
 mqtt_client.on_connect = on_connect
 mqtt_client.on_disconnect = on_disconnect
-mqtt_client.on_log = on_log
+#mqtt_client.on_log = on_log
 
 class Passenger():
 	id = 0
