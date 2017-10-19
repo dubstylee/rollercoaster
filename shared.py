@@ -2,6 +2,7 @@ import time, socket, sys
 import paho.mqtt.client as paho
 import signal
 from datetime import datetime as dt
+import Queue
 
 mqtt_client = paho.Client()
 
@@ -75,6 +76,13 @@ class Passenger():
 			passengers.append(Passenger.from_string(p))
 		return passengers
 
+class SetQueue(Queue.Queue):
+	def _init(self, maxsize):
+		self.queue = set()
+	def _put(self, item):
+		self.queue.add(item)
+	def _get(self):
+		return self.queue.pop()
 
 #test = []
 #test.append(Passenger(3))

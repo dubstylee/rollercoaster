@@ -16,6 +16,7 @@ class State(Enum):
 class Control():
 	state = State.WAITING_FOR_PASSENGERS
 	passengers = []
+	cars = SetQueue()
 	timeout = 0
 
 
@@ -44,19 +45,21 @@ def on_message(client, userdata, msg):
 
 				if len(control.passengers) == CAR_CAPACITY:
 					control.state = State.WAITING_FOR_CAR
-					mqtt_message = "PICKUP a %s" % control.passengers
+					mqtt_message = "PICKUP %s %s" % (control.cars.get(), control.passengers)
 					send_message(mqtt_message)
 			else:
 				mqtt_message = "CONTROL platform is full"
 				send_message(mqtt_message)
 	elif "CAR" in msg.payload:
-		print "MESSAGE FROM CAR %s" % msg.payload
+		#print "MESSAGE FROM CAR %s" % msg.payload
 		splits = str.split(msg.payload, " ")
-		if splits[4] == "a":
-			if splits[5] == "ACCEPT":
-				control.timeout = 0
-				control.state = State.WAITING_FOR_PASSENGERS
-				del control.passengers[:]
+		if splits[5] == "READY":
+			control.cars.put(splits[4])
+			print control.cars.queue
+		if splits[5] == "ACCEPT":
+			control.timeout = 0
+			control.state = State.WAITING_FOR_PASSENGERS
+			del control.passengers[:]
 
 def main():
 
@@ -72,9 +75,9 @@ def main():
 		if control.state == State.WAITING_FOR_CAR:
 			time.sleep(0.5)
 			control.timeout = control.timeout + 1
-			if control.timeout > 15:
+			if control.timeout > 20:
 				send_message("CONTROL timeout, re-sending")
-				send_message("PICKUP a %s" % control.passengers)
+				send_message("PICKUP %s %s" % (control.cars.get(), control.passengers))
 				control.timeout = 0
 		else:
 			time.sleep(3)
