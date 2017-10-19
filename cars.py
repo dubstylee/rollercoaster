@@ -14,29 +14,33 @@ class Car:
   state = State.READY
   passengers = []
 
-  def advanceState(self):
+  def advance_state(self):
     self.state = State((self.state.value + 1) % 4)
-    print seld.identifier + " " + self.state.name
+    print self.identifier + " " + self.state.name
+
+  def print_state(self):
+    print "********** %s" %self.state.name
 
   def dispatch(self):
+    print "Car Dispatching"
     while(True):
-      self.advanceState()
-      if(self.state == READY):
+      self.advance_state()
+      #self.print_state()
+      if(self.state == State.READY):
         break
       else:
-        time.sleep(1)
-    print "Car %s " + self.identifier + " is now vacant"
+        time.sleep(2)
+    print "Car %s is now vacant" % self.identifier
 
 car = Car()
       
 def on_message(client, userdata, msg):
   message = msg.payload
-  print message
-  if "PICKUP" in message and car.state == State.READY:
-    splits = message.split(' ', 4)
-    if(splits[2] == car.identifier): 
-      send_message("ACCEPT %s" % car.identifier)
-      car.passengers = Passanger.list_from_string();
+  if "PICKUP" in message:
+    splits = message.split(' ', 5)
+    if(splits[4] == car.identifier): 
+      send_message("CAR %s ACCEPT" % car.identifier)
+      car.passengers = Passenger.list_from_string(splits[5])
       car.dispatch()
 
 mqtt_client.on_message = on_message
@@ -48,7 +52,7 @@ def main():
   car.identifier = identifier
   while True:
     if car.state == State.READY:
-      send_message("READY %s" %car.identifier);
+      send_message("CAR %s READY" %car.identifier);
     time.sleep(3);
 
 if __name__ == "__main__": main()
