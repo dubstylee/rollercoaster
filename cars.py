@@ -39,7 +39,7 @@ dispatch = False
 def on_message(client, userdata, msg):
   global dispatch
   message = msg.payload
-  if "PICKUP" in message && car.state == State.READY:
+  if "PICKUP" in message and car.state == State.READY:
     splits = message.split(' ', 5)
     if(splits[4] == car.identifier): 
       send_message("CAR %s ACCEPT" % car.identifier)
@@ -57,6 +57,7 @@ def main():
   while True:
     if dispatch == True:
        car.dispatch()
+       dispatch = False
     if car.state == State.READY:
       send_message("CAR %s READY" %car.identifier);
     time.sleep(3);
