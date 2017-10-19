@@ -36,7 +36,7 @@ def on_disconnect(client, userdata, rc):
 def on_log(client, userdata, level, buf):
 	print "log: {}".format(buf)
 
-def send_message(message)
+def send_message(message):
 	timestamp = dt.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S.%f')
 	mqtt_client.publish(mqtt_topic, "[%s] %s %s" % (timestamp, ip_addr, message))
 
