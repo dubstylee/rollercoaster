@@ -7,8 +7,8 @@ from datetime import datetime as dt
 
 CAR_CAPACITY 	= 3
 PLATFORM_CAPACITY = 3
-OVERLAP_DELAY 	= 0.03
-WAIT_DELAY 	= 0.1
+OVERLAP_DELAY 	= 0.02
+WAIT_DELAY 	= 0.04
 TOTAL_DELAY 	= WAIT_DELAY + OVERLAP_DELAY
 
 # for leds

@@ -65,7 +65,7 @@ def on_message(client, userdata, msg):
 
 def run_auto():
 	while True:
-		time.sleep(randint(2,10))
+		time.sleep(randint(2,5))
 		if turnstile.state == State.CAN_SEND:
 			turnstile.cur_passenger = turnstile.cur_passenger + 1
 			turnstile.state = State.WAITING_FOR_ACK

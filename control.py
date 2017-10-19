@@ -26,7 +26,7 @@ class Control():
 	def add_passenger(self, passenger):
 		self.passengers.append(passenger)
 		# walk from the edge of platform
-		time.sleep(TOTAL_DELAY*(7-PLATFORM_CAPACITY))
+		time.sleep(TOTAL_DELAY*(6-PLATFORM_CAPACITY))
 		leds[-1].write(ON)
 		time.sleep(WAIT_DELAY)
 		for i in range(len(leds)-1, len(self.passengers)-1, -1):
