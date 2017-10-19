@@ -25,4 +25,5 @@ Capabilities
 
 CAR
 
-MONITOR
+<b>MONITOR</b></br>
+<p>The monitor process does not send or respond to any message. The monitor simply logs all messages it sees on the subscribed topic into a file for analysis.</p>
