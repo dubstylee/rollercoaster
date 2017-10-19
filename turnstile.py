@@ -4,6 +4,16 @@ from random import randint
 from shared import *
 
 
+# set up leds
+leds = []
+for i in range(2+PLATFORM_CAPACITY, 10):
+	led = mraa.Gpio(i)
+	led.dir(mraa.DIR_OUT)
+	led.write(OFF)
+	leds.append(led)
+print "turnstile has %d leds" % len(leds)
+
+
 class State(Enum):
 	CAN_SEND = 0
 	WAITING_FOR_ACK = 1
@@ -15,22 +25,27 @@ class Turnstile():
 	timeout = 0
 
 	def clear_lights(self):
-		for i in range(7, PLATFORM_CAPACITY-1, -1):
-			leds[i].write(OFF)
+		for led in leds:
+			led.write(OFF)
 
-	def send_passenger(self, passenger):
+	def send_passenger(self):
 		self.clear_lights()
 		send_message("TURNSTILE requests entry for passenger #%d" % self.cur_passenger)
 
-		leds[7].write(0)
-		for i in range(6, PLATFORM_CAPACITY-1, -1):
+		leds[-1].write(ON)
+		for i in range(len(leds)-2, -1, -1):
 			leds[i].write(ON)
 			time.sleep(OVERLAP_DELAY)
 			leds[i+1].write(OFF)
 			time.sleep(WAIT_DELAY)
+		time.sleep(OVERLAP_DELAY)
+		leds[0].write(OFF)
 
 turnstile = Turnstile()
 
+def control_c_handler(signum, frame):
+	turnstile.clear_lights()
+	exit_program()
 
 def on_message(client, userdata, msg):
 	# we only listen for messages from CONTROL
@@ -41,20 +56,21 @@ def on_message(client, userdata, msg):
 				turnstile.state = State.CAN_SEND
 			elif "platform is full" in msg.payload:
 				time.sleep(TOTAL_DELAY*(7-PLATFORM_CAPACITY))
-				for i in range(PLATFORM_CAPACITY, 7):
+				for i in range(0, len(leds)-1):
 					leds[i+1].write(ON)
 					time.sleep(OVERLAP_DELAY)
 					leds[i].write(OFF)
 					time.sleep(WAIT_DELAY)				
-				leds[7].write(OFF)
+				leds[-1].write(OFF)
 
 def run_auto():
 	while True:
-		time.sleep(randint(0,4))
+		time.sleep(randint(2,10))
 		if turnstile.state == State.CAN_SEND:
 			turnstile.cur_passenger = turnstile.cur_passenger + 1
 			turnstile.state = State.WAITING_FOR_ACK
-		send_message("TURNSTILE requests entry for passenger #%d" % turnstile.cur_passenger)
+		turnstile.send_passenger()
+		#send_message("TURNSTILE requests entry for passenger #%d" % turnstile.cur_passenger)
 
 def run_manually():
 	while True:
@@ -64,7 +80,7 @@ def run_manually():
 			if turnstile.state == State.CAN_SEND:
 				turnstile.cur_passenger = turnstile.cur_passenger + 1
 				turnstile.state = State.WAITING_FOR_ACK
-			turnstile.send_passenger(turnstile.cur_passenger)
+			turnstile.send_passenger()
 		elif choice == 'q':
 			turnstile.clear_lights()
 			exit_program()

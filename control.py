@@ -3,6 +3,15 @@ from enum import Enum
 from shared import *
 
 
+# set up leds
+leds = []
+for i in range(2, 2+PLATFORM_CAPACITY):
+	led = mraa.Gpio(i)
+	led.dir(mraa.DIR_OUT)
+	led.write(OFF)
+	leds.append(led)
+
+
 class State(Enum):
 	WAITING_FOR_PASSENGERS = 0
 	WAITING_FOR_CAR = 1
@@ -18,11 +27,17 @@ class Control():
 		self.passengers.append(passenger)
 		# walk from the edge of platform
 		time.sleep(TOTAL_DELAY*(7-PLATFORM_CAPACITY))
-		for i in range(PLATFORM_CAPACITY, len(self.passengers)-1, -1):
+		leds[-1].write(ON)
+		time.sleep(WAIT_DELAY)
+		for i in range(len(leds)-1, len(self.passengers)-1, -1):
 			leds[i-1].write(ON)
 			time.sleep(OVERLAP_DELAY)
 			leds[i].write(OFF)
 			time.sleep(WAIT_DELAY)
+
+	def clear_lights(self):
+		for led in leds:
+			led.write(OFF)
 
 	def request_pickup(self):
 		if self.cars.count() > 0:
@@ -30,6 +45,13 @@ class Control():
 
 
 control = Control()
+
+
+def control_c_handler(signum, frame):
+	control.clear_lights()
+	exit_program()
+
+signal.signal(signal.SIGINT, control_c_handler)
 
 
 def on_message(client, userdata, msg):
@@ -58,8 +80,7 @@ def on_message(client, userdata, msg):
 		elif splits[5] == "ACCEPT":
 			control.timeout = 0
 			control.state = State.WAITING_FOR_PASSENGERS
-			for i in range(0, len(control.passengers)):
-				leds[i].write(OFF)
+			control.clear_lights()
 			del control.passengers[:]
 
 def main():
