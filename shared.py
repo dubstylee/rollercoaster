@@ -1,8 +1,12 @@
 import time, socket, sys
 import paho.mqtt.client as paho
 import signal
+from datetime import datetime as dt
 
 mqtt_client = paho.Client()
+
+CAR_CAPACITY = 3
+PLATFORM_CAPACITY = 3
 
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 s.connect(("8.8.8.8", 80))
@@ -12,8 +16,9 @@ print('IP address: {}'.format(ip_addr))
 s.close()
 
 broker = 'sansa.cs.uoregon.edu'  # Boyana's server 
+mqtt_topic = 'cis650/somethingcool'
 mqtt_client.connect(broker, '1883') 
-mqtt_client.subscribe('cis650/somethingcool') 
+mqtt_client.subscribe(mqtt_topic)
 
 def exit_program():
 	mqtt_client.disconnect()

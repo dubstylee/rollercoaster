@@ -16,24 +16,12 @@ class Turnstile():
 	state = State.CAN_SEND
 	cur_passenger = 0
 
-# Instantiate the MQTT client
-#mqtt_client = paho.Client()
 
 turnstile = Turnstile()
-
-# Get your IP address
-s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-s.connect(("8.8.8.8", 80))
-ip_addr = str(s.getsockname()[0])
-print('IP address: {}'.format(ip_addr))
-s.close()
 
 
 def on_message(client, userdata, msg):
 
-	#print(client)
-	#print(userdata)
-	#print(msg.topic)
 	if "CONTROL" in msg.payload:
 		# we only listen for messages from CONTROL
 		if turnstile.state == State.CAN_SEND:
@@ -59,9 +47,8 @@ def main():
 	# other handlers are set in shared.py
 	mqtt_client.on_message = on_message
 
-	mqtt_topic = 'cis650/somethingcool'
 
-	mqtt_client.will_set(mqtt_topic, '______________Will of TURNSTILE _________________\n\n', 0, False)
+	mqtt_client.will_set(mqtt_topic, '______________Will of TURNSTILE_________________\n\n', 0, False)
 	mqtt_client.connect(broker, '1883')
 	mqtt_client.subscribe(mqtt_topic)
 	mqtt_client.loop_start()
@@ -83,5 +70,4 @@ def main():
 		elif choice == 'q':
 			exit_program()
 
-# I have the loop_stop() in the control_c_handler above. A bit kludgey.
 main()
