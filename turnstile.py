@@ -14,6 +14,20 @@ class Turnstile():
 	cur_passenger = 0
 	timeout = 0
 
+	def clear_lights(self):
+		for i in range(7, PLATFORM_CAPACITY-1, -1):
+			leds[i].write(OFF)
+
+	def send_passenger(self, passenger):
+		self.clear_lights()
+		send_message("TURNSTILE requests entry for passenger #%d" % self.cur_passenger)
+
+		leds[7].write(0)
+		for i in range(6, PLATFORM_CAPACITY-1, -1):
+			leds[i].write(ON)
+			time.sleep(OVERLAP_DELAY)
+			leds[i+1].write(OFF)
+			time.sleep(WAIT_DELAY)
 
 turnstile = Turnstile()
 
@@ -25,7 +39,14 @@ def on_message(client, userdata, msg):
 		if turnstile.state == State.WAITING_FOR_ACK:
 			if "allow passenger" in msg.payload:
 				turnstile.state = State.CAN_SEND
-
+			elif "platform is full" in msg.payload:
+				time.sleep(TOTAL_DELAY*(7-PLATFORM_CAPACITY))
+				for i in range(PLATFORM_CAPACITY, 7):
+					leds[i+1].write(ON)
+					time.sleep(OVERLAP_DELAY)
+					leds[i].write(OFF)
+					time.sleep(WAIT_DELAY)				
+				leds[7].write(OFF)
 
 def run_auto():
 	while True:
@@ -43,8 +64,9 @@ def run_manually():
 			if turnstile.state == State.CAN_SEND:
 				turnstile.cur_passenger = turnstile.cur_passenger + 1
 				turnstile.state = State.WAITING_FOR_ACK
-			send_message("TURNSTILE requests entry for passenger #%d" % turnstile.cur_passenger)
+			turnstile.send_passenger(turnstile.cur_passenger)
 		elif choice == 'q':
+			turnstile.clear_lights()
 			exit_program()
 
 

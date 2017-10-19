@@ -1,11 +1,26 @@
 import time, socket, sys
 import paho.mqtt.client as paho
 import signal
+import mraa
 from datetime import datetime as dt
 
 
-CAR_CAPACITY = 3
+CAR_CAPACITY 	= 3
 PLATFORM_CAPACITY = 3
+OVERLAP_DELAY 	= 0.1
+WAIT_DELAY 	= 0.2
+TOTAL_DELAY 	= WAIT_DELAY + OVERLAP_DELAY
+
+# set up leds
+ON 	= 0
+OFF 	= 1
+
+leds = []
+for i in range(2, 10):
+	led = mraa.Gpio(i)
+	led.dir(mraa.DIR_OUT)
+	led.write(OFF)
+	leds.append(led)
 
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 s.connect(("8.8.8.8", 80))

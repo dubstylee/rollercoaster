@@ -14,6 +14,16 @@ class Control():
 	cars = Queue()
 	timeout = 0
 
+	def add_passenger(self, passenger):
+		self.passengers.append(passenger)
+		# walk from the edge of platform
+		time.sleep(TOTAL_DELAY*(7-PLATFORM_CAPACITY))
+		for i in range(PLATFORM_CAPACITY, len(self.passengers)-1, -1):
+			leds[i-1].write(ON)
+			time.sleep(OVERLAP_DELAY)
+			leds[i].write(OFF)
+			time.sleep(WAIT_DELAY)
+
 	def request_pickup(self):
 		if self.cars.count() > 0:
 			send_message("PICKUP %s %s" % (self.cars.get(), self.passengers))
@@ -31,7 +41,7 @@ def on_message(client, userdata, msg):
 			p = Passenger(int(pid))
 
 			if len(control.passengers) < PLATFORM_CAPACITY:
-				control.passengers.append(p)
+				control.add_passenger(p)
 				send_message("CONTROL allow passenger #%d" % p.id)
 
 				if len(control.passengers) == CAR_CAPACITY:
@@ -48,6 +58,8 @@ def on_message(client, userdata, msg):
 		elif splits[5] == "ACCEPT":
 			control.timeout = 0
 			control.state = State.WAITING_FOR_PASSENGERS
+			for i in range(0, len(control.passengers)):
+				leds[i].write(OFF)
 			del control.passengers[:]
 
 def main():
