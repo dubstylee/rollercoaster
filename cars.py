@@ -34,15 +34,17 @@ class Car:
     print "Car %s is now vacant" % self.identifier
 
 car = Car()
+dispatch = False
       
 def on_message(client, userdata, msg):
+  global dispatch
   message = msg.payload
-  if "PICKUP" in message:
+  if "PICKUP" in message && car.state == State.READY:
     splits = message.split(' ', 5)
     if(splits[4] == car.identifier): 
       send_message("CAR %s ACCEPT" % car.identifier)
       car.passengers = Passenger.list_from_string(splits[5])
-      target=car.dispatch()
+      dispatch = True
 
 mqtt_client.on_message = on_message
 mqtt_client.will_set(mqtt_topic, 'These cars be messed up dawg!!!!\n\n', 0, False)
@@ -51,7 +53,10 @@ mqtt_client.loop_start()
 def main():
   identifier = sys.argv[1]
   car.identifier = identifier
+  global dispatch
   while True:
+    if dispatch == True:
+       car.dispatch()
     if car.state == State.READY:
       send_message("CAR %s READY" %car.identifier);
     time.sleep(3);
