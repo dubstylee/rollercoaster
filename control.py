@@ -24,7 +24,7 @@ control = Control()
 
 def on_message(client, userdata, msg):
 	if "TURNSTILE" in msg.payload:
-		#print "MESSAGE FROM TURNSTILE %s" % msg.payload
+		print "MESSAGE FROM TURNSTILE %s" % msg.payload
 		splits = str.split(msg.payload, " ")
 		if splits[4] == "requests" and splits[5] == "entry":
 			pid = splits[8][1:]
@@ -32,18 +32,16 @@ def on_message(client, userdata, msg):
 
 			if len(control.passengers) < PLATFORM_CAPACITY:
 				control.passengers.append(p)
-				mqtt_message = "CONTROL allow passenger #%d" % p.id
-				send_message(mqtt_message)
+				send_message("CONTROL allow passenger #%d" % p.id)
 
 				if len(control.passengers) == CAR_CAPACITY:
 					control.state = State.WAITING_FOR_CAR
 					control.request_pickup()
 			else:
-				mqtt_message = "CONTROL platform is full"
-				send_message(mqtt_message)
+				send_message("CONTROL platform is full")
 
 	elif "CAR" in msg.payload:
-		#print "MESSAGE FROM CAR %s" % msg.payload
+		print "MESSAGE FROM CAR %s" % msg.payload
 		splits = str.split(msg.payload, " ")
 		if splits[5] == "READY":
 			control.cars.put_distinct(splits[4])
@@ -66,6 +64,7 @@ def main():
 				control.request_pickup()
 				control.timeout = 0
 		else:
+			print "CARs ready: %s" % control.cars.items
 			time.sleep(3)
 
 
