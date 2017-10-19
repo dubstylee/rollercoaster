@@ -3,8 +3,6 @@ import paho.mqtt.client as paho
 import time,threading
 from shared import *
 
-NUM_CARS = 1
-
 class State(Enum):
   READY = 0
   RIDING_AND_BONDING = 1
@@ -12,9 +10,9 @@ class State(Enum):
   FORM_SOCIAL_GROUP = 3
 
 class Car:
-  identifier = 0;
+  identifier = ''
   state = State.READY
-  passangers = []
+  passengers = []
 
   def advanceState(self):
     self.state = State((self.state.value + 1) % 4)
@@ -27,45 +25,30 @@ class Car:
         break
       else:
         time.sleep(1)
-    print "Car %d " + self.identifier + " is now vacant"
-      
-cars = []
-for i in range(NUM_CARS):
-  car = Car()
-  car.identifier = i+1
-  cars.append(car)
+    print "Car %s " + self.identifier + " is now vacant"
 
+car = Car()
+      
 def on_message(client, userdata, msg):
   message = msg.payload
   print message
-  if "PICKUP" in message :
-    #pessangers = getPessangers();
-    car = getVacantCar();
-    if(car != None):
-      car.pessangers = pessangers
-      mqtt_client.publish(mqtt_topic, "ACCEPT %s" % car.pessangers)
-      #perform the dispatch on another thread
-      thread = threading.Thread(target=car.dispatch())
-      thread.start()
-    else:
-      mqtt_client.publish(mqtt_topic, "REJECT %s" % car.pessangers)
+  if "PICKUP" in message and car.state == State.READY:
+    splits = message.split(' ', 4)
+    if(splits[2] == car.identifier): 
+      send_message("ACCEPT %s" % car.identifier)
+      car.passengers = Passanger.list_from_string();
+      car.dispatch()
 
-def on_log(client, userdata, level, buf):
-        receivedLog = "log: {}".format(buf)
-        print(receivedLog)
+mqtt_client.on_message = on_message
+mqtt_client.will_set(mqtt_topic, 'These cars be messed up dawg!!!!\n\n', 0, False)
+mqtt_client.loop_start()
 
-mqtt_client.on_message = on_message 
-mqtt_client.will_set(mqtt_topic, 'These cars be messed up dawg!!!!\n\n', 0, False) 
-qtt_client.loop_start()
-
-def getVacantCar() :
-  for car in cars:
-    if(car.status == READY):
-      return car
-  return None
- 
 def main():
+  identifier = sys.argv[1]
+  car.identifier = identifier
   while True:
-    time.sleep(1)
+    if car.state == State.READY:
+      send_message("READY %s" %car.identifier);
+    time.sleep(3);
 
 if __name__ == "__main__": main()
