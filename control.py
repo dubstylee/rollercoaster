@@ -30,7 +30,7 @@ control = Control()
 
 # Instantiate the MQTT client
 #mqtt_client = paho.Client()
-mqtt_topic = 'cis650/somethingcool'
+#mqtt_topic = 'cis650/somethingcool'
 
 
 # The callback for when a PUBLISH message is received from the server that matches any of your topics.
@@ -45,15 +45,16 @@ def on_message(client, userdata, msg):
 		pid = msg.payload[i+30:]
 		#print pid
 		p = Passenger(int(pid))
-		timestamp = dt.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S.%f')
+		#timestamp = dt.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S.%f')
 
 		print "count == %d" % len(control.passengers)
 		if len(control.passengers) < NUM_PASSENGERS:
 			control.passengers.append(p)
-			mqtt_message = "[%s] %s CONTROL allow passenger #%d" % (timestamp, ip_addr, p.id)
+			mqtt_message = "CONTROL allow passenger #%d" % p.id
 		else:
-			mqtt_message = "[%s] %s CONTROL platform is full" % (timestamp, ip_addr)
-		mqtt_client.publish(mqtt_topic, mqtt_message)
+			mqtt_message = "CONTROL platform is full"
+		send_message(mqtt_message)
+		#mqtt_client.publish(mqtt_topic, mqtt_message)
 
 	# Here is where you write to file and unsubscribe
 	#with open("test.txt", "a+") as myfile:
@@ -63,12 +64,12 @@ def on_message(client, userdata, msg):
 
 def main():
 
+	mqtt_client.will_set(mqtt_topic, '______________Will of CONTROL_________________\n\n', 0, False)
+	#broker = 'sansa.cs.uoregon.edu'
+	#mqtt_client.connect(broker, '1883')
+
 	# other callbacks are set in shared.py
 	mqtt_client.on_message = on_message
-
-	mqtt_client.will_set(mqtt_topic, '______________Will of CONTROL_________________\n\n', 0, False)
-	broker = 'sansa.cs.uoregon.edu'
-	mqtt_client.connect(broker, '1883')
 
 	# You can subscribe to more than one topic: https://pypi.python.org/pypi/paho-mqtt#subscribe-unsubscribe.
 	# If you do list more than one topic, consdier using message_callback_add for each topic as described above.
@@ -86,13 +87,13 @@ def main():
 				print("not ready for pickup yet")
 			else:
 				control.state = State.WAITING_FOR_CAR
-				timestamp = dt.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S.%f')
-				mqtt_message = "[%s] %s PICKUP %s" % (timestamp,ip_addr,control.passengers)
-				mqtt_client.publish(mqtt_topic, mqtt_message)
+				#timestamp = dt.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S.%f')
+				mqtt_message = "PICKUP %s" % control.passengers
+				send_message(mqtt_message)
+				#mqtt_client.publish(mqtt_topic, mqtt_message)
 		elif choice == "q":
 			exit_program()
 
 # I have the loop_stop() in the control_c_handler above. A bit kludgey.
 
 main()
-
