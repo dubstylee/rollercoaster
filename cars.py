@@ -14,10 +14,11 @@ class Car:
   identifier = ''
   state = State.READY
   passengers = []
+  led = None
 
   def advance_state(self):
     self.state = State((self.state.value + 1) % 4)
-    print self.identifier + " " + self.state.name
+    #print self.identifier + " " + self.state.name
 
   def print_state(self):
     print "********** %s" %self.state.name
@@ -28,9 +29,16 @@ class Car:
       self.advance_state()
       #self.print_state()
       if(self.state == State.READY):
+        self.led.write(ON)
         break
       else:
-        time.sleep(randint(1, 10))
+        i = 0
+        while i < 10:
+          self.led.write(OFF)
+          time.sleep(0.25)
+          self.led.write(ON)
+          time.sleep(0.25)
+          i = i + 1
     print "Car %s is now vacant" % self.identifier
 
 car = Car()
@@ -47,12 +55,19 @@ def on_message(client, userdata, msg):
       dispatch = True
 
 mqtt_client.on_message = on_message
-mqtt_client.will_set(mqtt_topic, 'These cars be messed up dawg!!!!\n\n', 0, False)
+mqtt_client.will_set(mqtt_topic, "Will of Car %s\n\n" %car.identifier, 0, False)
 mqtt_client.loop_start()
 
 def main():
+  if len(sys.argv) != 3:
+    print "Invalid number of arguments"
+    exit_program()
   identifier = sys.argv[1]
+  lednum = int(sys.argv[2])
   car.identifier = identifier
+  car.led = mraa.Gpio(lednum+1)
+  car.led.dir(mraa.DIR_OUT)
+  car.led.write(ON)
   global dispatch
   while True:
     if dispatch == True:
