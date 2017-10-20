@@ -1,11 +1,8 @@
 # rollercoaster
 Implement rollercoaster model on Edison
 
-TODO
-Spawn multiple cars to advanvce in parallel using threads.
-Get the messages to represent closely what actions and states do.
-
-
+<b>VIDEO OF PROJECT IN ACTION</b></br>
+https://www.dropbox.com/s/riwykezodze2pqj/rollercoaster.MOV?dl=0
 
 Capabilities
 
