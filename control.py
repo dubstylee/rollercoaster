@@ -39,6 +39,9 @@ class Control():
 		for led in leds:
 			led.write(OFF)
 
+	def display_cars(self):
+		print "CARS %s" % self.cars.items
+
 	def request_pickup(self):
 		if self.cars.count() > 0:
 			send_message("PICKUP %s %s" % (self.cars.get(), self.passengers))
@@ -76,12 +79,16 @@ def on_message(client, userdata, msg):
 		print "MESSAGE FROM CAR %s" % msg.payload
 		splits = str.split(msg.payload, " ")
 		if splits[5] == "READY":
-			control.cars.put_distinct(splits[4])
+			if not splits[4] in control.cars.items:
+				control.cars.put_distinct(splits[4])
+				control.display_cars()
 		elif splits[5] == "ACCEPT":
 			control.timeout = 0
 			control.state = State.WAITING_FOR_PASSENGERS
 			control.clear_lights()
 			del control.passengers[:]
+			control.display_cars()
+
 
 def main():
 	mqtt_client.will_set(mqtt_topic, '___Will of CONTROL___', 0, False)
@@ -97,8 +104,7 @@ def main():
 				control.request_pickup()
 				control.timeout = 0
 		else:
-			print "CARs ready: %s" % control.cars.items
-			time.sleep(3)
+			time.sleep(1)
 
 
 if __name__ == '__main__': main()

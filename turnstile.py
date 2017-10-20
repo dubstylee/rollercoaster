@@ -11,7 +11,6 @@ for i in range(2+PLATFORM_CAPACITY, 10):
 	led.dir(mraa.DIR_OUT)
 	led.write(OFF)
 	leds.append(led)
-print "turnstile has %d leds" % len(leds)
 
 
 class State(Enum):
@@ -50,11 +49,12 @@ def control_c_handler(signum, frame):
 def on_message(client, userdata, msg):
 	# we only listen for messages from CONTROL
 	if "CONTROL" in msg.payload:
-		print "MESSAGE FROM CONTROL %s" % msg.payload
 		if turnstile.state == State.WAITING_FOR_ACK:
 			if "allow passenger" in msg.payload:
+				print "MESSAGE FROM CONTROL %s" % msg.payload
 				turnstile.state = State.CAN_SEND
 			elif "platform is full" in msg.payload:
+				print "MESSAGE FROM CONTROL %s" % msg.payload
 				time.sleep(TOTAL_DELAY*(7-PLATFORM_CAPACITY))
 				for i in range(0, len(leds)-1):
 					leds[i+1].write(ON)
